@@ -1,6 +1,7 @@
 """Conversion code. Called only inside disposable worker processes."""
 import io
 import math
+import os
 import re
 import shutil
 import warnings
@@ -239,8 +240,17 @@ def inspect_file(payload):
                     raise ValueError("Image exceeds the page-count limit.")
                 if fmt != "TIFF" and getattr(source, "n_frames", 1) > 1:
                     notes.append("Only the first frame/primary image will be imported.")
+                page_sizes = []
+                for index in range(count):
+                    source.seek(index)
+                    check_pixels(*source.size, payload["pixel_limit"])
+                    size = source.size
+                    if source.getexif().get(274) in (5, 6, 7, 8):
+                        size = size[::-1]
+                    page_sizes.append(list(size))
+                source.seek(0)
                 image = ImageOps.exif_transpose(source).copy()
-                info = {"kind": "image", "format": fmt, "pages": count, "width": image.width, "height": image.height, "unit": "px"}
+                info = {"kind": "image", "format": fmt, "pages": count, "width": image.width, "height": image.height, "unit": "px", "page_sizes": page_sizes}
         except (OSError, Image.DecompressionBombError, Image.DecompressionBombWarning) as error:
             raise ValueError("Cannot open image, or it exceeds the pixel safety limit.") from error
     image.thumbnail((360, 440), Image.Resampling.LANCZOS)
@@ -249,6 +259,22 @@ def inspect_file(payload):
     image.save(payload["thumbnail"], "PNG")
     image.close()
     return {**info, "warnings": notes}
+
+
+def page_thumbnail(payload):
+    Image.MAX_IMAGE_PIXELS = payload["pixel_limit"]
+    image = load_image(payload["item"], Options(operation="image_convert", dpi=72, max_width=360, max_height=440), payload["pixel_limit"])
+    if image.mode not in ("RGB", "RGBA", "L", "LA", "P", "1"):
+        image = image.convert("RGB")
+    path = Path(payload["thumbnail"])
+    temporary = path.with_name(f".{path.name}.{os.getpid()}")
+    try:
+        image.save(temporary, "PNG")
+        temporary.replace(path)
+    finally:
+        image.close()
+        temporary.unlink(missing_ok=True)
+    return {}
 
 
 def strip_jpeg_metadata(source, destination):

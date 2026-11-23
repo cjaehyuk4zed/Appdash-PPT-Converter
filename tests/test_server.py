@@ -117,3 +117,32 @@ def test_chunked_request_limit(tmp_path):
         client.get("/")
         response = client.post("/api/jobs", content=iter([b"{" + b" " * 500, b" " * 600 + b"}"]), headers={"content-type": "application/json"})
         assert response.status_code == 413
+
+
+def test_tiff_page_card_dimensions_thumbnails_cache_and_validation(app, tmp_path):
+    import io
+    from pathlib import Path
+
+    from PIL import Image
+
+    path = tmp_path / 'pages.tiff'
+    with Image.new('RGB', (120, 160), 'red') as first, Image.new('RGB', (220, 140), 'blue') as second:
+        first.save(path, save_all=True, append_images=[second])
+    with TestClient(app) as client:
+        asset = upload(client, path)
+        assert asset['page_sizes'] == [[120, 160], [220, 140]]
+        url = f"/api/files/{asset['id']}/thumbnail"
+        for page, color in [(0, (255, 0, 0)), (1, (0, 0, 255))]:
+            response = client.get(url, params={'page': page})
+            assert response.status_code == 200
+            with Image.open(io.BytesIO(response.content)) as thumbnail:
+                assert thumbnail.size == tuple(asset['page_sizes'][page])
+                assert thumbnail.convert('RGB').getpixel((10, 10)) == color
+        cached = Path(app.state.store.assets[asset['id']]['path']).parent / 'thumbnail-1.png'
+        modified = cached.stat().st_mtime_ns
+        assert client.get(url, params={'page': 1}).status_code == 200
+        assert cached.stat().st_mtime_ns == modified
+        for page in (-1, 2, 'oops', '1.5'):
+            assert client.get(url, params={'page': page}).status_code == 422
+        client.cookies.clear()
+        assert client.get(url, params={'page': 1}).status_code == 404

@@ -32,7 +32,7 @@ class Config:
     data_dir: Path = field(default_factory=lambda: Path(os.environ.get("CONVERTER_DATA_DIR", str(BASE / ".runtime"))).resolve())
     max_file_bytes: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_MAX_FILE_MB", "100")) * 1000000)
     max_request_bytes: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_MAX_BATCH_MB", "250")) * 1000000)
-    max_pixels: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_MAX_PIXELS", "40000000")))
+    max_pixels: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_MAX_PIXELS", "60000000")))
     max_pages: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_MAX_PAGES", "500")))
     max_output_bytes: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_MAX_OUTPUT_MB", "500")) * 1000000)
     timeout: int = field(default_factory=lambda: int(os.environ.get("CONVERTER_JOB_TIMEOUT", "600")))
@@ -300,7 +300,21 @@ def create_app(config=None):
     async def thumbnail(request):
         asset_id = request.path_params["asset_id"]
         asset = store.asset(asset_id, request.state.owner)
-        return FileResponse(Path(asset["path"]).parent / "thumbnail.png", media_type="image/png")
+        try:
+            page = int(request.query_params.get("page", "0"))
+        except ValueError:
+            raise HTTPException(422, "Invalid page number.") from None
+        if not 0 <= page < asset["pages"]:
+            raise HTTPException(422, "Invalid page number.")
+        path = Path(asset["path"]).parent / (f"thumbnail-{page}.png" if page else "thumbnail.png")
+        if not path.exists():
+            def render_thumbnail():
+                with store.inspection_slots:
+                    if not path.exists():
+                        item = {key: asset[key] for key in ("path", "kind", "password", "render_path") if key in asset}
+                        run_process("thumbnail", {"item": {**item, "page": page}, "thumbnail": str(path), "pixel_limit": config.max_pixels}, timeout=min(config.timeout, 60))
+            await asyncio.to_thread(render_thumbnail)
+        return FileResponse(path, media_type="image/png")
 
     @route("/api/files/{asset_id}", "DELETE")
     async def delete_file(request):

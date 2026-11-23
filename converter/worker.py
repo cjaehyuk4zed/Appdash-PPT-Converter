@@ -4,9 +4,11 @@ import time
 
 def child_main(connection, task, payload):
     try:
-        from .engine import conversion, inspect_file
+        from .engine import conversion, inspect_file, page_thumbnail
         if task == "inspect":
             result = inspect_file(payload)
+        elif task == "thumbnail":
+            result = page_thumbnail(payload)
         else:
             result = conversion(payload, lambda event: connection.send(("progress", event)))
         connection.send(("result", result))

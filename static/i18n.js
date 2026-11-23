@@ -4,6 +4,9 @@ const i18n = (() => {
   let language = 'ko';
   try { if (localStorage.getItem(storageKey) === 'en') language = 'en'; } catch {}
   const korean = {
+    'Slides / pages': '슬라이드·페이지',
+    'Drag the handle to reorder slides / pages.': '핸들을 드래그해 순서를 바꿀 수 있습니다.',
+    'Drag to reorder: {name}, page {page}': '드래그하여 순서 변경: {name}, {page}번째',
     '{count} slide': '{count}슬라이드',
     '{count} slides': '{count}슬라이드',
     "PPT rendering uses local PowerPoint or LibreOffice. Password-protected files are not supported.": "PPT는 로컬 PowerPoint 또는 LibreOffice로 렌더링합니다. 암호가 설정된 파일은 지원하지 않습니다.",

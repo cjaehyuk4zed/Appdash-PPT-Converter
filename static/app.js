@@ -35,6 +35,7 @@ function setBusy(busy) {
   $('clear-files').disabled = busy || state.uploading || !currentFiles().length;
   $('file-input').disabled = busy || state.uploading;
   document.querySelectorAll('.remove-file').forEach(button => button.disabled = busy);
+  document.querySelectorAll('.page-item button, .page-item input, #select-all, #select-none').forEach(control => control.disabled = busy || state.uploading);
 }
 function updateSettings() {
   const pdf = pdfOutput(), preserve = preserveMode(), sourcePdf = tools[state.tool].pdf, target = state.mode === 'target';
@@ -81,38 +82,108 @@ function updateSettings() {
   setBusy(state.busy);
 }
 function renderFiles() {
-  const files = currentFiles(), list = $('file-list');
-  list.replaceChildren();
-  $('file-count').textContent = files.length;
-  for (const file of files) {
-    const row = node('div', 'file-card'), thumbnail = node('img', 'file-thumb');
-    thumbnail.src = `/api/files/${file.id}/thumbnail`; thumbnail.alt = t('{name}, first page', { name: file.name }); thumbnail.loading = 'lazy';
-    const info = node('div', 'file-info');
-    info.append(node('div', 'file-name', file.name), node('div', 'file-meta', `${file.format} · ${file.width} × ${file.height} ${file.unit} · ${pageCount(file.pages)} · ${bytes(file.size)}`));
-    const remove = node('button', 'remove-file', '×'); remove.type = 'button'; remove.title = t('Remove {name}', { name: file.name }); remove.setAttribute('aria-label', remove.title);
-    remove.onclick = () => removeFile(file.id);
-    row.append(thumbnail, info, remove); list.append(row);
-  }
+  $('file-count').textContent = currentFiles().length;
   renderPages(); updateSettings();
 }
-function renderPages() {
-  const pages = currentPages(), list = $('page-list'); list.replaceChildren();
+function renderPages(focusPage = null) {
+  const pages = currentPages(), list = $('file-list'), scrollTop = list.scrollTop;
+  list.replaceChildren();
+  let focusHandle;
   show('order-section', pages.length > 0);
   $('selection-count').textContent = `${selectedPages().length} / ${pages.length}`;
   pages.forEach((page, index) => {
-    const file = state.files.find(file => file.id === page.file_id), row = node('div', 'page-item'), checkbox = node('input');
+    const file = state.files.find(file => file.id === page.file_id), row = node('div', 'file-card page-item'), checkbox = node('input');
+    row.classList.toggle('unselected', !page.selected);
+    row.setAttribute('role', 'listitem');
+    const handle = node('button', 'drag-handle', '⠿'); handle.type = 'button';
+    handle.setAttribute('aria-label', t('Drag to reorder: {name}, page {page}', { name: file.name, page: page.page + 1 }));
+    handle.setAttribute('aria-describedby', 'order-hint');
+    handle.title = handle.getAttribute('aria-label');
+    handle.onpointerdown = event => startPageDrag(event, page, row, handle);
+    handle.onkeydown = event => {
+      if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+      event.preventDefault(); movePage(page, pages[index + (event.key === 'ArrowUp' ? -1 : 1)]);
+    };
+    if (page === focusPage) focusHandle = handle;
     checkbox.type = 'checkbox'; checkbox.checked = page.selected; checkbox.setAttribute('aria-label', t('Select {name}, page {page}', { name: file.name, page: page.page + 1 }));
-    checkbox.onchange = () => { page.selected = checkbox.checked; updateSettings(); $('selection-count').textContent = `${selectedPages().length} / ${pages.length}`; };
-    row.append(checkbox, node('span', 'page-title', t('{name} · p{page}', { name: file.name, page: page.page + 1 }) + (page.rotation ? ` · ${page.rotation}°` : '')));
+    checkbox.onchange = () => { page.selected = checkbox.checked; row.classList.toggle('unselected', !page.selected); updateSettings(); $('selection-count').textContent = `${selectedPages().length} / ${pages.length}`; };
+    const thumbnail = node('img', 'file-thumb'), info = node('div', 'file-info'), actions = node('div', 'page-actions');
+    thumbnail.src = `/api/files/${file.id}/thumbnail?page=${page.page}`;
+    thumbnail.alt = t('{name} · p{page}', { name: file.name, page: page.page + 1 }); thumbnail.loading = 'lazy'; thumbnail.draggable = false;
+    thumbnail.style.transform = `rotate(${page.rotation}deg)`;
+    const name = file.pages > 1 ? t('{name} · p{page}', { name: file.name, page: page.page + 1 }) : file.name;
+    const dimensions = file.page_sizes?.[page.page] || [file.width, file.height];
+    const title = node('div', 'file-name', name); title.title = name;
+    info.append(title, node('div', 'file-meta', `${file.format} · ${dimensions[0]} × ${dimensions[1]} ${file.unit} · ${pageCount(file.pages)} · ${bytes(file.size)}` + (page.rotation ? ` · ${page.rotation}°` : '')));
     for (const [text, label, action] of [
       ['↻', 'Rotate clockwise', () => { page.rotation = (page.rotation + 90) % 360; renderPages(); }],
       ['↑', 'Move earlier', () => movePage(page, pages[index - 1])],
       ['↓', 'Move later', () => movePage(page, pages[index + 1])],
-    ]) { const button = node('button', '', text); button.type = 'button'; button.setAttribute('aria-label', `${t(label)}: ${t('Select {name}, page {page}', { name: file.name, page: page.page + 1 })}`); button.onclick = action; row.append(button); }
+    ]) { const button = node('button', '', text); button.type = 'button'; button.setAttribute('aria-label', `${t(label)}: ${t('Select {name}, page {page}', { name: file.name, page: page.page + 1 })}`); button.title = button.getAttribute('aria-label'); button.onclick = action; actions.append(button); }
+    const remove = node('button', 'remove-file', '×'); remove.type = 'button'; remove.title = t('Remove {name}', { name: file.name }); remove.setAttribute('aria-label', remove.title);
+    remove.onclick = () => removeFile(file.id);
+    actions.append(remove);
+    row.append(handle, checkbox, thumbnail, info, actions);
     list.append(row);
   });
+  list.scrollTop = scrollTop;
+  if (focusHandle) focusHandle.focus({ preventScroll: true });
+  setBusy(state.busy);
 }
-function movePage(page, neighbor) { if (!neighbor) return; const first = state.pages.indexOf(page), second = state.pages.indexOf(neighbor); [state.pages[first], state.pages[second]] = [state.pages[second], state.pages[first]]; renderPages(); }
+function reorderPage(page, target, after = false) {
+  const pages = currentPages();
+  if (state.busy || state.uploading || page === target || !pages.includes(page) || !pages.includes(target)) return;
+  state.pages.splice(state.pages.indexOf(page), 1);
+  state.pages.splice(state.pages.indexOf(target) + (after ? 1 : 0), 0, page);
+  renderPages(page); updateSettings();
+}
+function movePage(page, neighbor) {
+  const pages = currentPages();
+  reorderPage(page, neighbor, pages.indexOf(page) < pages.indexOf(neighbor));
+}
+function startPageDrag(event, page, row, handle) {
+  if (event.button !== 0 || state.busy || state.uploading || currentPages().length < 2) return;
+  const list = $('file-list'), pointer = event.pointerId, rows = [...list.children], pages = currentPages();
+  let active = false, target = null, after = false, frame = 0, x = event.clientX, y = event.clientY;
+  const clearTarget = () => { if (target) target.classList.remove('drop-before', 'drop-after'); target = null; };
+  const locateTarget = () => {
+    clearTarget();
+    const candidate = document.elementFromPoint(x, y)?.closest('.page-item');
+    if (!candidate || candidate === row || candidate.parentElement !== list) return;
+    target = candidate;
+    const bounds = target.getBoundingClientRect();
+    after = y >= bounds.top + bounds.height / 2;
+    target.classList.add(after ? 'drop-after' : 'drop-before');
+  };
+  const scroll = () => {
+    const bounds = list.getBoundingClientRect();
+    if (x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) {
+      const step = y < bounds.top + 28 ? -8 : y > bounds.bottom - 28 ? 8 : 0;
+      if (step) { list.scrollTop += step; locateTarget(); }
+    }
+    frame = requestAnimationFrame(scroll);
+  };
+  const move = next => {
+    if (next.pointerId !== pointer) return;
+    x = next.clientX; y = next.clientY;
+    if (!active && Math.hypot(x - event.clientX, y - event.clientY) < 5) return;
+    next.preventDefault();
+    if (!active) { active = true; row.classList.add('dragging'); frame = requestAnimationFrame(scroll); }
+    locateTarget();
+  };
+  const finish = next => {
+    if (next.pointerId !== pointer) return;
+    const destination = target ? pages[rows.indexOf(target)] : null;
+    handle.removeEventListener('pointermove', move);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) handle.removeEventListener(type, finish);
+    cancelAnimationFrame(frame); row.classList.remove('dragging'); clearTarget();
+    if (handle.hasPointerCapture(pointer)) handle.releasePointerCapture(pointer);
+    if (active && next.type === 'pointerup' && destination) reorderPage(page, destination, after);
+  };
+  handle.setPointerCapture(pointer);
+  handle.addEventListener('pointermove', move);
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) handle.addEventListener(type, finish);
+}
 async function removeFile(id) {
   try { await api(`/api/files/${id}`, { method: 'DELETE' }); state.files = state.files.filter(file => file.id !== id); state.pages = state.pages.filter(page => page.file_id !== id); renderFiles(); } catch (error) { notice(error.message); }
 }

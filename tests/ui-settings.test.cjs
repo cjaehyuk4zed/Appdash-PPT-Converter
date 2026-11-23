@@ -103,3 +103,59 @@ test('size summary follows settings while folding preserves conversion options',
   get('max-height').value = '800'; run('updateSettings()');
   assert.equal(get('size-summary').textContent, '≤ 1200 × 800 px');
 });
+
+function loadPages() {
+  const ui = load();
+  ui.run(`
+    state.files = [{id:'ppt',kind:'ppt'}, {id:'image',kind:'image'}];
+    state.pages = [
+      {file_id:'ppt',page:0,selected:true,rotation:90},
+      {file_id:'image',page:0,selected:true,rotation:0},
+      {file_id:'ppt',page:1,selected:false,rotation:180},
+      {file_id:'image',page:1,selected:false,rotation:0},
+      {file_id:'ppt',page:2,selected:true,rotation:0}
+    ];
+    renderPages = () => {}; updateSettings = () => {};
+  `);
+  return ui;
+}
+
+test('drag reordering inserts before or after a page without changing selections or rotation', () => {
+  const { run } = loadPages();
+  run('reorderPage(currentPages()[0], currentPages()[2], true)');
+  assert.equal(run('currentPages().map(page => page.page).join()'), '1,2,0');
+  assert.equal(run('selectedPages().map(page => page.page).join()'), '2,0');
+  assert.equal(run('currentPages()[2].rotation'), 90);
+  assert.equal(run('currentPages()[0].rotation'), 180);
+  run('reorderPage(currentPages()[2], currentPages()[0], false)');
+  assert.equal(run('currentPages().map(page => page.page).join()'), '0,1,2');
+  assert.equal(run("state.pages.filter(page => page.file_id === 'image').map(page => page.page).join()"), '0,1');
+});
+
+test('arrow moves use the same ordering and boundary moves are harmless', () => {
+  const { run } = loadPages();
+  run('movePage(currentPages()[0], currentPages()[1])');
+  assert.equal(run('currentPages().map(page => page.page).join()'), '1,0,2');
+  run('movePage(currentPages()[1], currentPages()[0])');
+  assert.equal(run('currentPages().map(page => page.page).join()'), '0,1,2');
+  run('movePage(currentPages()[0], undefined); reorderPage(currentPages()[0], currentPages()[0])');
+  assert.equal(run('currentPages().map(page => page.page).join()'), '0,1,2');
+});
+
+test('reordering blocks hidden-tool targets and edits during upload or conversion', () => {
+  const { run } = loadPages();
+  run("reorderPage(currentPages()[0], state.pages.find(page => page.file_id === 'image'))");
+  run('state.busy = true; reorderPage(currentPages()[0], currentPages()[2], true)');
+  run('state.busy = false; state.uploading = true; reorderPage(currentPages()[0], currentPages()[2], true)');
+  assert.equal(run('currentPages().map(page => page.page).join()'), '0,1,2');
+});
+
+test('image reordering stays independent of slides and keeps checkbox and rotation state', () => {
+  const { run } = loadPages();
+  run("state.tool = 'images_to_ppt'; reorderPage(currentPages()[1], currentPages()[0])");
+  assert.equal(run('currentPages().map(page => page.page).join()'), '1,0');
+  assert.equal(run('selectedPages().map(page => page.page).join()'), '0');
+  run("state.tool = 'ppt_to_images'");
+  assert.equal(run('currentPages().map(page => page.page).join()'), '0,1,2');
+  assert.equal(run('currentPages()[0].rotation'), 90);
+});

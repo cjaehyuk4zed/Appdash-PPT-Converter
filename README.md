@@ -34,7 +34,9 @@ cd Appdash-PPT-Converter
 이미지 입력은 JPEG, PNG, WebP, TIFF, BMP, GIF, AVIF, HEIC/HEIF를 지원합니다. TIFF는 여러 프레임을 가져오며 GIF 등은 첫 프레임만 사용합니다. 코덱 지원 상태는 `/api/ready`에서 확인할 수 있습니다.
 
 - 한국어 기본, English 전환 및 브라우저별 언어 저장. 파일·설정·결과를 유지하며 전환합니다.
-- 슬라이드·이미지 선택, 순서 변경, 90도 회전, PPT 슬라이드 범위 지정.
+- 슬라이드·이미지를 썸네일 카드 목록으로 표시하며, 핸들을 마우스·터치로 드래그해 순서를 바꿉니다. 삽입 위치 표시와 목록 가장자리 자동 스크롤을 지원합니다.
+- 선택·회전 상태를 유지하며 이동합니다. 핸들의 ↑/↓ 키 또는 카드의 이동 버튼으로도 순서를 바꿀 수 있습니다. 변환·업로드 중에는 변경이 잠깁니다.
+- 카드별 선택, 90도 회전, 파일 삭제, PPT 슬라이드 범위 지정을 지원합니다. 여러 슬라이드·페이지가 있는 파일의 X 버튼은 해당 파일 전체를 삭제합니다.
 - 화질 선택과 용량 선택. 이미지 출력 기본 제한은 **1 MB**, PPTX 출력은 **10 MB**입니다.
 - 용량 선택에서는 화질 **1~95**를 자동 탐색합니다. 허용한 범위에서 해상도를 낮출 수 있습니다.
 - 용량은 ZIP 전체가 아닌 **개별 결과 파일의 실제 바이트 크기**로 확인합니다. `1 KB = 1,000 bytes`, `1 MB = 1,000,000 bytes`입니다.
@@ -71,7 +73,7 @@ cd Appdash-PPT-Converter
 | `CONVERTER_DATA_DIR` | 앱 폴더의 `.runtime` |
 | `CONVERTER_MAX_FILE_MB` / `CONVERTER_MAX_BATCH_MB` | `100` / `250` |
 | `CONVERTER_MAX_PAGES` | `500` |
-| `CONVERTER_MAX_PIXELS` | `40000000` |
+| `CONVERTER_MAX_PIXELS` | `60000000` |
 | `CONVERTER_MAX_OUTPUT_MB` | `500` (ZIP 전 결과 파일 합계) |
 | `CONVERTER_JOB_TIMEOUT` | `600`초 (파일 검사는 최대 180초) |
 | `CONVERTER_RETENTION_SECONDS` | `3600`초 |

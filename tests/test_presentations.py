@@ -59,6 +59,14 @@ finally:
         assert asset['pages'] == 3 and asset['kind'] == 'ppt'
         assert asset['warnings']
         assert not {'path', 'render_path', 'pptx_path'} & set(asset)
+        # Each card uses its actual slide thumbnail, including hidden slides.
+        for page, channel in [(0, 0), (1, 1), (2, 2)]:
+            response = client.get(f"/api/files/{asset['id']}/thumbnail", params={'page': page})
+            assert response.status_code == 200
+            with Image.open(io.BytesIO(response.content)) as thumbnail:
+                color = thumbnail.convert('RGB').getpixel((5, 5))
+                assert color[channel] > max(color[index] for index in range(3) if index != channel) * 2
+        assert client.get(f"/api/files/{asset['id']}/thumbnail", params={'page': 3}).status_code == 422
         selections = [{'file_id': asset['id'], 'page': page} for page in [2, 0]]
         original_bytes = source.read_bytes()
         cases = [
