@@ -1,0 +1,24 @@
+{
+  "name": "PPT - IMG Converter",
+  "description": "Local PowerPoint and image conversion, slide selection and measured file-size targets",
+  "type": "service",
+  "group": "Utilities",
+  "gateway": {
+    "adapter": "process",
+    "workingDirectory": "C:\\Users\\cjaeh\\CodingProjects\\AppDash-Apps\\PPT - IMG Converter",
+    "start": {
+      "executable": "C:\\Users\\cjaeh\\CodingProjects\\AppDash-Apps\\PPT - IMG Converter\\.venv\\Scripts\\python.exe",
+      "args": [
+        "run.py"
+      ]
+    },
+    "stop": {
+      "executable": "",
+      "args": []
+    },
+    "healthUrl": "http://127.0.0.1:8766/api/ready",
+    "openUrl": "http://127.0.0.1:8766/",
+    "timeoutSeconds": 300,
+    "readinessSeconds": 30
+  }
+}

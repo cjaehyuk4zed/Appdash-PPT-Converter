@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f9"><title data-i18n="PPT / IMG — File studio">PPT / IMG — 파일 변환</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css"><script src="/static/i18n.js" defer></script><script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="PPT IMG 홈" data-i18n-aria-label="PPT IMG home"><span class="brand-mark">↔</span><span>PPT <span class="brand-slash">/</span> IMG<small data-i18n="YOUR FILE STUDIO">파일 변환 도구</small></span></a>
+    <div class="nav-label" data-i18n="WORKSPACE">작업 도구</div>
+    <nav aria-label="변환 도구" data-i18n-aria-label="Conversion tools">
+      <button class="tool active" data-tool="ppt_to_images"><span class="nav-icon">▧</span><span data-i18n="PPT to images">PPT → 이미지</span></button>
+      <button class="tool" data-tool="images_to_ppt"><span class="nav-icon">▤</span><span data-i18n="Images to PPT">이미지 → PPT</span></button>
+      <button class="tool" data-tool="image_convert"><span class="nav-icon">⇄</span><span data-i18n="Image converter">이미지 변환</span></button>
+      <button class="tool" data-tool="ppt_compress"><span class="nav-icon">⇲</span><span data-i18n="Compress PPT">PPT 압축</span></button>
+    </nav>
+    <div class="sidebar-bottom"><span class="privacy-icon">◇</span><strong data-i18n="A private workspace">내 파일을 안전하게</strong><p><span data-i18n="Processed on this server.">이 서버에서 직접 처리합니다.</span><br><span data-i18n="No third-party conversion service.">외부 변환 서비스를 사용하지 않습니다.</span></p><div class="connection"><span id="connection-dot"></span><span id="connection-text" data-i18n="Connecting…">변환 엔진에 연결 중…</span></div></div>
+  </aside>
+
+  <main>
+    <header class="topbar"><div><span data-i18n="File studio">파일 변환</span> <span class="breadcrumb">/</span> <span id="breadcrumb" data-i18n="PPT to images">PPT → 이미지</span></div><div class="topbar-actions"><label class="language-switch"><span data-i18n="Language">언어</span><select id="language-select" aria-label="언어" data-i18n-aria-label="Language"><option value="ko">한국어</option><option value="en">English</option></select></label><span class="local-badge"><span></span> Windows &amp; Linux</span></div></header>
+    <div class="workspace">
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <div class="workbench">
+        <section class="canvas" aria-label="파일 및 변환 결과" data-i18n-aria-label="Files and results">
+          <section class="panel source-panel">
+            <div class="panel-heading"><h2><span data-i18n="Your files">파일</span> <span id="file-count" class="count">0</span></h2><button id="clear-files" class="text-button" disabled data-i18n="Clear all">모두 비우기</button></div>
+            <label id="dropzone" class="dropzone" for="file-input" tabindex="0"><input id="file-input" type="file" multiple accept=".ppt,.pptx" hidden><span class="upload-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong><span data-i18n="Drop your files here">파일을 여기에 놓거나</span> <span data-i18n="or browse files">파일 선택</span></strong><small id="accepted-formats" data-i18n="PPT / PPTX files · up to 100 MB each">PPT / PPTX 파일 · 파일당 최대 100 MB</small></span><span class="add-circle">+</span></label>
+            <div class="source-options"><p id="renderer-note" class="hint" data-i18n="PPT rendering uses local PowerPoint or LibreOffice. Password-protected files are not supported.">PPT는 로컬 PowerPoint 또는 LibreOffice로 렌더링합니다. 암호가 설정된 파일은 지원하지 않습니다.</p><span id="upload-state" role="status"></span></div>
+            <div id="file-list" class="file-list"></div>
+            <details id="order-section" class="order-section" hidden><summary><span data-i18n="Choose slides / pages, rotate &amp; arrange">슬라이드·페이지 선택·회전·순서 변경</span> <span id="selection-count"></span></summary><div class="order-actions"><button id="select-all" class="text-button" data-i18n="Select all">전체 선택</button><button id="select-none" class="text-button" data-i18n="Select none">선택 해제</button></div><div id="page-list" class="page-list"></div></details>
+          </section>
+
+          <section class="panel preview-panel">
+            <div class="panel-heading"><h2><span data-i18n="Preview">미리보기</span> <span id="preview-tag" class="subtle-tag" data-i18n="OUTPUT">출력</span></h2><div class="preview-controls"><button id="preview-fit" class="text-button" disabled data-i18n="Fit">화면에 맞춤</button><button id="preview-actual" class="text-button" disabled>100%</button></div></div>
+            <div id="preview-empty" class="preview-empty"><div class="empty-art"><div class="art-page"><span></span><span></span><span></span><span></span></div><div class="art-picture"><svg viewBox="0 0 76 60" aria-hidden="true"><circle cx="53" cy="16" r="5" fill="#83a5a1"/><path d="m4 53 23-27 13 15 11-10 22 22" fill="#b7cdc8"/></svg></div><div class="art-arrow">↗</div></div><h3 data-i18n="A clear look before you convert.">변환 결과 미리보기</h3><p data-i18n="Add files, adjust your settings, then preview a selected page.">파일과 설정을 선택한 뒤 페이지를 미리 확인하세요.</p><span data-i18n="See the detail. Find the balance.">화질과 파일 크기를 확인할 수 있습니다.</span></div>
+            <div id="preview-stage" class="preview-stage" hidden><img id="preview-image" alt="변환 결과 미리보기" data-i18n-alt="Converted output preview"><div class="preview-caption" data-i18n="First output · preview limited to 2400 px · use the download for full resolution">첫 번째 결과 · 미리보기는 최대 2400 px · 원본 해상도는 다운로드 파일에서 확인하세요</div></div>
+          </section>
+
+          <section id="job-panel" class="panel job-panel" hidden aria-live="polite"><div class="panel-heading"><h2 id="job-title" data-i18n="Converting">변환 중</h2><button id="cancel-job" class="text-button danger" data-i18n="Cancel">취소</button></div><div class="job-body"><div class="progress-track"><div id="progress-bar"></div></div><p id="job-detail" data-i18n="Preparing files…">파일 준비 중…</p></div></section>
+          <section id="results-panel" class="panel" hidden><div class="panel-heading"><h2 id="results-title" data-i18n="Your results">변환 결과</h2><div class="results-actions"><button id="delete-results" class="text-button danger" data-i18n="Delete now">결과 삭제</button><a id="download-zip" class="small-button" href="#" data-i18n="Download ZIP ↧">ZIP 다운로드 ↧</a></div></div><div id="result-warnings" class="result-warnings"></div><div id="result-list"></div><p id="retention-note" class="retention-note" data-i18n="Files are automatically deleted after one hour.">파일은 1시간 후 자동 삭제됩니다.</p></section>
+          <div class="workspace-footnote"><span data-i18n="◇ Originals stay untouched.">◇ 원본 파일은 변경하지 않습니다.</span><span data-i18n="Made for the files you work with.">필요한 형식과 크기로 변환하세요.</span></div>
+        </section>
+
+        <aside class="panel settings" aria-label="변환 설정" data-i18n-aria-label="Conversion settings">
+          <div class="panel-heading"><h2 data-i18n="Make it yours">변환 설정</h2><button id="reset-settings" class="text-button" data-i18n="Reset">초기화</button></div>
+          <form id="settings-form">
+            <div class="settings-section"><div class="section-label"><span>01</span> <span data-i18n="OUTPUT">출력</span></div>
+              <label id="format-field" class="field"><span data-i18n="Image format">이미지 형식</span> <select id="format"><option value="jpeg" data-i18n="JPG — compact &amp; compatible">JPG — 작은 용량, 높은 호환성</option><option value="png" data-i18n="PNG — sharp &amp; lossless">PNG — 선명한 무손실 형식</option><option value="webp" data-i18n="WebP — efficient &amp; versatile">WebP — 효율적인 이미지 압축</option><option value="tiff" data-i18n="TIFF — document friendly">TIFF — 문서 보관용</option><option value="bmp" data-i18n="BMP — uncompressed bitmap">BMP — 비압축 비트맵</option><option value="avif" data-i18n="AVIF — modern compression">AVIF — 높은 압축 효율</option></select></label>
+              <label id="compression-field" class="field" hidden><span data-i18n="Compression approach">압축 방식</span> <select id="compression"><option value="preserve" data-i18n="Preserve text &amp; vector content">텍스트·벡터 유지</option><option value="raster" data-i18n="Rasterize slides — stronger compression">이미지로 변환 — 더 강한 압축</option></select></label>
+              <p id="preserve-note" class="hint" hidden data-i18n="Optimizes PPTX structure without reducing image resolution. Size savings vary. Rotation requires rasterized compression.">이미지 해상도를 유지하며 PPTX 구조를 최적화합니다. 용량 감소 폭은 파일마다 다릅니다. 회전하려면 이미지 압축 방식을 선택하세요.</p>
+              <p id="raster-note" class="inline-warning" hidden data-i18n="Turns slides into flat images. Editable text, shapes, links, animation, audio and video will be removed.">슬라이드를 이미지로 바꿉니다. 텍스트·도형 편집, 링크, 애니메이션, 오디오·비디오가 사라집니다.</p>
+              <label id="split-field" class="check-field" hidden><input id="split" type="checkbox"> <span data-i18n="Create a separate PPTX per slide / image">페이지마다 별도 PPTX 만들기</span></label>
+            </div>
+            <div class="settings-section"><div class="section-label"><span>02</span> <span data-i18n="QUALITY &amp; SIZE">화질 및 용량</span></div>
+              <div class="segmented" role="group" aria-label="최적화 모드" data-i18n-aria-label="Optimization mode"><button type="button" class="selected" data-mode="quality" data-i18n="Quality Select">화질 선택</button><button type="button" data-mode="target" data-i18n="File Size Select">용량 선택</button></div>
+              <div id="target-fields" hidden><label class="field"><span id="target-size-label" data-i18n="Maximum size per image">이미지당 최대 용량</span> <div class="input-unit"><input id="target-size" type="number" min="0.001" step="any" value="1"><select id="target-unit" aria-label="파일 용량 단위" data-i18n-aria-label="File-size unit"><option value="1">KB</option><option value="1000" selected>MB</option></select></div></label><p class="hint" data-i18n="A limit for each finished file, not the ZIP. KB = 1,000 bytes.">ZIP 전체가 아닌 개별 결과 파일의 용량 제한입니다. 1 KB = 1,000 bytes.</p></div>
+              <div id="raster-settings">
+                <label id="preset-field" class="field"><span data-i18n="Starting preset">기본 설정</span> <select id="preset"><option value="balanced" data-i18n="Balanced — everyday work">균형 — 일반적인 작업</option><option value="small" data-i18n="Small — easy to share">작은 용량 — 공유용</option><option value="print" data-i18n="Print — fine detail">인쇄 — 높은 화질</option><option value="lossless" data-i18n="Lossless — sharp graphics">무손실 — 선명한 그래픽</option><option value="custom" data-i18n="Custom">사용자 설정</option></select></label>
+                <div id="quality-field"><label class="range-heading" for="quality"><span data-i18n="Image quality">이미지 화질</span> <output id="quality-value">85</output></label><input id="quality" type="range" min="1" max="95" value="85"><div class="range-captions"><span data-i18n="Smaller file">작은 용량</span><span data-i18n="More detail">높은 화질</span></div></div>
+                <label id="lossless-field" class="check-field" hidden><input id="lossless" type="checkbox"><span data-i18n="Lossless WebP">무손실 WebP</span></label>
+                <details id="size-options" class="size-options"><summary><span data-i18n="Image size &amp; resolution">이미지 크기·해상도</span><span class="size-current"><span id="size-summary">200 DPI · 원본 크기</span><span class="size-chevron" aria-hidden="true">⌄</span></span></summary><div class="size-options-body">
+                <label id="dpi-field" class="field"><span data-i18n="PPT rendering resolution">PPT 변환 해상도</span> <div class="input-unit"><input id="dpi" type="number" min="36" max="600" value="200"><span>DPI</span></div></label>
+                <div class="two-fields"><label class="field"><span data-i18n="Max width">최대 너비</span> <div class="input-unit"><input id="max-width" type="number" min="1" max="20000" placeholder="원본 유지" data-i18n-placeholder="Original"><span>px</span></div></label><label class="field"><span data-i18n="Max height">최대 높이</span> <div class="input-unit"><input id="max-height" type="number" min="1" max="20000" placeholder="원본 유지" data-i18n-placeholder="Original"><span>px</span></div></label></div>
+                <p class="hint" data-i18n="Keeps proportions. Images are never enlarged.">가로세로 비율을 유지하며, 원본보다 확대하지 않습니다.</p>
+                </div></details>
+              </div>
+            </div>
+            <details class="settings-section advanced"><summary><span data-i18n="More options">고급 설정</span> <span>+</span></summary><div class="advanced-body">
+              <label id="pages-field" class="field"><span data-i18n="PPT slide range">PPT 슬라이드 범위</span> <input id="pages" type="text" placeholder="전체 또는 1-3, 7, 10-12" maxlength="2000" data-i18n-placeholder="All pages, or 1-3, 7, 10-12"></label>
+              <div id="transform-fields"><label class="field"><span data-i18n="Color">색상</span> <select id="color"><option value="original" data-i18n="Original color">원본 색상</option><option value="grayscale" data-i18n="Grayscale">회색조</option><option value="bw" data-i18n="Black &amp; white document">흑백 문서</option></select></label><label id="threshold-field" class="field" hidden><span data-i18n="Black &amp; white threshold">흑백 구분 기준값</span> <input id="threshold" type="number" min="0" max="255" value="180"></label><label id="background-field" class="field"><span data-i18n="Background for JPEG / BMP">JPEG / BMP 배경색</span> <input id="background" type="color" value="#ffffff"></label></div>
+              <div id="pdf-layout-fields" hidden><label class="field"><span data-i18n="Slide size">슬라이드 크기</span> <select id="paper"><option value="original" data-i18n="Match first image proportions">첫 이미지 비율에 맞춤</option><option value="wide" data-i18n="Widescreen — 16:9">와이드 — 16:9</option><option value="standard" data-i18n="Standard — 4:3">표준 — 4:3</option><option value="a4" data-i18n="A4 — automatic orientation">A4 — 방향 자동 선택</option><option value="letter" data-i18n="Letter — automatic orientation">Letter — 방향 자동 선택</option></select></label><label class="field"><span data-i18n="Margins">여백</span> <div class="input-unit"><input id="margin" type="number" min="0" max="50" value="0"><span>mm</span></div></label><label class="check-field"><input id="preserve-original" type="checkbox" checked><span data-i18n="Keep original image data when possible">가능하면 원본 이미지 데이터 유지</span></label><p class="hint" data-i18n="Embeds compatible original images when possible. A presentation uses one slide size; other images fit within it. Output is PPTX with one image per slide.">가능하면 원본 이미지를 넣습니다. PPT는 하나의 슬라이드 크기를 사용하며 나머지 이미지는 비율을 유지해 맞춥니다. 결과는 슬라이드마다 이미지 한 장을 넣은 PPTX입니다.</p></div>
+              <label id="document-metadata-field" class="check-field" hidden><input id="strip-document-metadata" type="checkbox" checked><span data-i18n="Remove PPTX document metadata">PPTX 문서 메타데이터 제거</span></label><label id="image-metadata-field" class="check-field"><input id="strip-metadata" type="checkbox" checked><span id="metadata-label" data-i18n="Remove image EXIF / GPS metadata">이미지 EXIF / GPS 메타데이터 제거</span></label>
+              <div id="target-advanced" hidden><label class="check-field"><input id="allow-downscale" type="checkbox" checked><span data-i18n="Allow resizing to meet the limit">용량을 맞추기 위한 크기 축소 허용</span></label><label id="min-dpi-field" class="field"><span data-i18n="Minimum PPT resolution">PPT 최소 해상도</span> <div class="input-unit"><input id="min-dpi" type="number" min="36" max="600" value="100"><span>DPI</span></div></label><label id="min-edge-field" class="field"><span data-i18n="Minimum image longest edge">이미지 긴 쪽의 최소 길이</span> <div class="input-unit"><input id="min-edge" type="number" min="64" max="20000" value="1024"><span>px</span></div></label></div>
+              <label id="page-budget-field" class="field" hidden><span data-i18n="Maximum embedded image size">PPT 내 이미지의 최대 용량</span> <div class="input-unit"><input id="page-budget" type="number" min="0.001" step="any" placeholder="제한 없음" data-i18n-placeholder="No limit"><span>KB/slide</span></div><small class="hint" data-i18n="Applies to each embedded slide image before PPTX overhead. This is not the size of a slide.">PPT에 넣기 전 페이지 이미지 각각에 적용합니다. PPT 슬라이드 자체의 용량 제한은 아닙니다.</small></label>
+            </div></details>
+            <div class="convert-footer"><button id="convert" class="primary-button" type="submit" disabled><span id="convert-label" data-i18n="Convert">이미지로 변환</span><span>→</span></button><button id="preview-button" class="secondary-button" type="button" disabled data-i18n="Preview" aria-label="첫 번째 선택 페이지 미리보기" data-i18n-aria-label="Preview first selected page">미리보기</button><p id="conversion-summary" data-i18n="Add a file to get started.">파일을 추가해 주세요.</p></div>
+          </form>
+        </aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
