@@ -348,9 +348,7 @@ def conversion(payload, progress):
     for index, group in enumerate(groups):
         item = group[0]
         extension = EXTENSIONS[options.format] if image_output else "pptx"
-        name = f"{index + 1:03d}_{safe_stem(item['name'])}"
-        if len(group) == 1:
-            name += f"_p{item['page'] + 1:03d}"
+        name = f"{safe_stem(item['name'])}_{index + 1:03d}"
         destination = root / f"{name}.{extension}"
         progress({"progress": round(index / len(groups) * 90), "detail": f"Converting output {index + 1} of {len(groups)}"})
         if image_output:

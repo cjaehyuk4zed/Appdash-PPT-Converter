@@ -17,6 +17,7 @@ from tests.conftest import convert, item
 def test_image_output_formats_and_bounds(tmp_path, noise_path, fmt):
     result, directory = convert(tmp_path, [item(noise_path)], format=fmt, max_width=160)
     output = result['outputs'][0]
+    assert output['name'].rsplit('.', 1)[0] == 'photo_001'
     with Image.open(directory / output['name']) as image:
         assert image.size == (160, 120)
     assert (directory / 'preview.png').is_file()
@@ -105,7 +106,23 @@ def test_split_and_preview_are_separate_single_slide_pptx(tmp_path, image_path):
         result = conversion({'directory': str(directory), 'items': [item(image_path)] * 2, 'options': {'operation': 'images_to_ppt', 'split': split}, 'preview': preview, 'pixel_limit': 40000000}, lambda _: None)
         assert len(result['outputs']) == count
         assert len({output['name'] for output in result['outputs']}) == count
+        assert [output['name'] for output in result['outputs']] == [f'sample_{index + 1:03d}.pptx' for index in range(count)]
         assert all(len(Presentation(str(directory / output['name'])).slides) == 1 for output in result['outputs'])
+
+
+def test_suffix_names_keep_unicode_dots_and_avoid_duplicate_stem_collisions(tmp_path):
+    first = tmp_path / '자료.v1.png'
+    second = tmp_path / '자료.v1.jpg'
+    Image.new('RGB', (100, 80), 'red').save(first)
+    Image.new('RGB', (100, 80), 'blue').save(second)
+    result, directory = convert(tmp_path, [item(second), item(first), item(second)], format='png')
+    expected = ['자료.v1_001.png', '자료.v1_002.png', '자료.v1_003.png']
+    assert [output['name'] for output in result['outputs']] == expected
+    with zipfile.ZipFile(directory / 'results.zip') as archive:
+        assert archive.namelist() == expected
+        for name, channel in zip(expected, [2, 0, 2], strict=True):
+            with Image.open(io.BytesIO(archive.read(name))) as image:
+                assert image.convert('RGB').getpixel((5, 5))[channel] > 200
 
 
 def test_preserve_content_reorders_slides_and_keeps_editable_text(tmp_path):

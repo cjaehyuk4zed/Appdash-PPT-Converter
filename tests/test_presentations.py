@@ -80,6 +80,7 @@ finally:
             assert response.status_code == 202, response.text
             job = wait(client, response.json()['id'])
             assert job['state'] == 'completed', job
+            assert [output['name'].rsplit('.', 1)[0] for output in job['outputs']] == [f'slides_{index + 1:03d}' for index in range(len(job['outputs']))]
             outputs = [client.get(f"/api/jobs/{job['id']}/outputs/{index}").content for index in range(len(job['outputs']))]
             assert client.get(f"/api/jobs/{job['id']}/preview").content.startswith(b'\x89PNG')
             assert client.get(f"/api/jobs/{job['id']}/zip").content.startswith(b'PK')

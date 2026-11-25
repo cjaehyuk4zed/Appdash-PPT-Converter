@@ -41,9 +41,11 @@ def test_api_real_worker_downloads_and_session_isolation(app, image_path):
         job_id = response.json()["id"]
         result = wait(client, job_id)
         assert result["state"] == "completed", result
+        assert result['outputs'][0]['name'] == 'sample_001.webp'
         output = client.get(f"/api/jobs/{job_id}/outputs/0")
         assert len(output.content) == result["outputs"][0]["size"]
         assert "attachment" in output.headers["content-disposition"]
+        assert 'filename="sample_001.webp"' in output.headers['content-disposition']
         assert client.get(f"/api/jobs/{job_id}/zip").content[:2] == b"PK"
         assert client.get(f"/api/jobs/{job_id}/preview").content[:4] == b"\x89PNG"
         cookie = client.cookies.get("ppt_converter_session")
